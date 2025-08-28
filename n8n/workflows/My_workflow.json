@@ -1,0 +1,167 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        20
+      ],
+      "id": "58283c31-170f-4132-8d21-b6f0dff1b008",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/compass~crawler-google-places/runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.APIFY_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"searchStringsArray\": [\n    \"coffee shops in Moscow\"\n  ],\n  \"maxCrawledPlacesPerSearch\": 10}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        20
+      ],
+      "id": "6fc79c9c-27de-4d28-92c8-a059e4f50e76",
+      "name": "Run Apify Actor"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/actor-runs/{{$json.data.id}}?waitForFinish=120",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.APIFY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        20
+      ],
+      "id": "fec85d83-fc26-4608-a5d7-24f684afb22a",
+      "name": "Wait For Run"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{$json.data.defaultDatasetId}}/items?clean=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.APIFY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        20
+      ],
+      "id": "12047db3-228e-4f3d-8a9f-02c16d872aae",
+      "name": "Fetch Dataset"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ 'INSERT INTO raw.apify_dataset (data) VALUES ($n8n$' + JSON.stringify($json).split('$').join('$$') + '$n8n$::jsonb);' }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        20
+      ],
+      "id": "7ffcdff9-be64-4feb-b0b4-05d80173f53e",
+      "name": "PG Insert Items1",
+      "credentials": {
+        "postgres": {
+          "id": "laIrOCVoqt5rbzgh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Run Apify Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Apify Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait For Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For Run": {
+      "main": [
+        [
+          {
+            "node": "Fetch Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Dataset": {
+      "main": [
+        [
+          {
+            "node": "PG Insert Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "31d49302-196b-413b-aeb4-0fbeaa3ffb17",
+  "meta": {
+    "instanceId": "22258345d8460f57f98f3827485cda571d63788b44aa892ba22d75e54fb95104"
+  },
+  "id": "V8Z9tEiulgajdCgV",
+  "tags": []
+}

@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: etl_postgres
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - TZ=${TZ}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+
+  n8n:
+    image: n8nio/n8n:1.72.1
+    container_name: etl_n8n
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./.env
+    environment:
+      - TZ=${TZ}
+      - N8N_PORT=5678
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=http
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      # Use Postgres for n8n's own DB (same database)
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      # Apify token passed via env (used by HTTP nodes)
+      - APIFY_TOKEN=${APIFY_TOKEN}
+    ports:
+      - "${N8N_PORT}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/workflows
+
+volumes:
+  pg_data:
+  n8n_data:
